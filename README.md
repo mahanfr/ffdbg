@@ -1,10 +1,10 @@
-# ffdgb - File Format Debugger
+# ffdbg - File Format Debugger
 
-ffdgb is a versatile program designed for meticulous file format debugging.
+ffdbg is a versatile program designed for meticulous file format debugging.
 it provides a seamless interface for iterating over files, byte by byte, 
 facilitating in-depth analysis and troubleshooting of file structures.
 you can use this tool for decoding property formats or debugging complex
-data structures. - chatgpt (I am too lazy to write a dscription)
+data structures. - chatgpt (I am too lazy to write a dsecription)
 
 ## Contributing
 Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
