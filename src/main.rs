@@ -1,4 +1,4 @@
-use std::{env::args, fs::File, io::{stdin, stdout, Read, Write}};
+use std::{env::args, fs::File, io::{stdin, stdout, Read, Write}, process::Command};
 
 struct Debugger {
     source: Vec<u8>,
@@ -27,27 +27,46 @@ fn input(prompt: &str) -> String {
     inp.trim().to_string()
 }
 
+fn parse_number(num_str: &str) -> Option<usize> {
+    if num_str.starts_with("0x") {
+        Some(usize::from_str_radix(num_str.trim_start_matches("0x"), 16).unwrap())
+    } else if num_str.starts_with("0b") {
+        Some(usize::from_str_radix(num_str.trim_start_matches("0b"), 2).unwrap())
+    } else {
+        if let Ok(num) = num_str.parse::<usize>() {
+            return Some(num);
+        } else {
+            return None;
+        }
+    }
+}
+
+
 fn debug(source: Vec<u8>) {
     let mut debugger = Debugger::new(source);
-    println!("size: {}",debugger.source.len());
 
     loop {
-        let prompt = input(format!("$0x{:X}> ",debugger.cur).as_str());
-        match prompt.parse::<u64>() {
-            Ok(x) => {
+        let prompt = input(format!("${:#04X}> ",debugger.cur).as_str());
+        match parse_number(&prompt) {
+            Some(x) => {
                 for i in debugger.cur..(debugger.cur + x as usize) {
-                    print!("{:X} ", debugger.source[i]);
+                    print!("{:02X} ", debugger.source[i]);
                 }
                 println!();
                 debugger.cur += x as usize;
             },
-            Err(_) => {
-                match prompt.as_str() {
+            None => {
+                let prompt_list = prompt.split(" ").collect::<Vec<&str>>();
+                match prompt_list[0].trim() {
                     "exit" | "quit" | "close" => {
                         break;
                     },
                     "reset" => {
                         debugger.rest();
+                    },
+                    "offset" => {
+                        let value = parse_number(prompt_list[1]).unwrap_or(debugger.cur);
+                        debugger.cur = value;
                     },
                     _ => {
                         println!("unknown command!");
@@ -73,10 +92,37 @@ fn help(program_path: String) {
     print_cmd_help("--help, -h".to_string(), "Shows help for the program".to_string());
 }
 
+fn extract_file_derails(file_path: String) {
+    match Command::new("file").arg("-b").arg(file_path).output() {
+        Ok(out) => {
+            if !out.status.success() {
+                println!("filetype: unknown");
+                return;
+            }
+            let out_str = String::from_utf8_lossy(&out.stdout);
+            let params = out_str.split(",");
+            for param in params {
+                println!("{}",param.trim());
+            }
+        },
+        Err(_) => {
+            println!("filetype: unknown");
+        }
+    }
+}
+
+fn show_file_details(file_path: String, size: usize) {
+    println!("\n{:=^1$}", file_path, 50);
+    println!("size: {}",size);
+    extract_file_derails(file_path);
+    println!("{}", "=".repeat(50));
+}
+
 fn start_debugging(file_path: String) {
-    let mut file = File::open(file_path).unwrap();
+    let mut file = File::open(&file_path).unwrap();
     let mut source = Vec::new();
     file.read_to_end(&mut source).unwrap();
+    show_file_details(file_path, source.len());
     debug(source);
 }
 
